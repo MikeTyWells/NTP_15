@@ -1,0 +1,32 @@
+# Machine-specific (contains local SDK path)
+local.properties
+
+# Gradle / build output
+.gradle/
+build/
+.kotlin/
+.externalNativeBuild/
+.cxx/
+captures/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.navigation/
+
+# Built artifacts (publish APKs as GitHub Release assets instead)
+*.apk
+*.aab
+*.ap_
+*.dex
+output-metadata.json
+
+# Signing material - never commit
+*.jks
+*.keystore
+keystore.properties
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
