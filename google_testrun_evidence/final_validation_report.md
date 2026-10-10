@@ -1,19 +1,28 @@
 # Final Validation Report - Google Testrun (Android 15 Boot-Start)
 
 **Device:** MicroTouch IDC_Series (TES), MediaTek MT8188
-**Android:** 15 (API 35), build AP3A.260207.015.A2, user/release-keys
+**Android:** 15 (API 35), firmware V3.0, build AP3A.260803.015.A2 (earlier runs: build AP3A.260207.015.A2, user/release-keys)
 **Application:** 4.0-android15-autostart (versionCode 4)
 **APK SHA-256 (debug build tested):** 2F056F93936381143B6EF6935F98017C3E6C36B6F2C32E85E07358FF1E3537E9
 
-## FINAL STATUS: APP OBJECTIVES MET IN GOOGLE TESTRUN
+## FINAL STATUS: COMPLIANT IN GOOGLE TESTRUN ON FIRMWARE V3.0
 
-In Google Testrun 2.4.0 (Device Qualification, 2026-10-08) the app produced NTPv4 traffic to
-Testrun's NTP server automatically at boot, with no manual steps, and both NTP tests passed.
-The run's overall result was Non-Compliant because of one test unrelated to this app
-(`connection.switch.arp_inspection`), caused by the device firmware's DHCP handling - see
-"Known device issue" below.
+On firmware V3.0 the tablet passed Google Testrun 2.4.0 (Device Qualification) in three full runs
+on 2026-10-09. All 31 Required tests were Compliant in each run, including
+`connection.switch.arp_inspection`. The app produced NTPv4 traffic to Testrun's NTP server
+automatically at boot, with no manual steps.
 
-## TESTRUN RESULTS RELEVANT TO THIS APP
+| Run (2026-10-09) | Overall | Required tests | ntp_dhcp (Roadmap, not in the verdict) |
+| --- | --- | --- | --- |
+| 11:09-11:26 | Compliant | 31/31 Compliant | Non-Compliant: the Testrun host was offline during its NTP trust check |
+| 11:39-11:54 | Compliant | 31/31 Compliant | Compliant |
+| 12:13-12:28 | Compliant | 31/31 Compliant | Compliant |
+
+On the earlier build (AP3A.260207.015.A2, 2026-10-08) the app's tests passed the same way, but the
+overall result was Non-Compliant because of `connection.switch.arp_inspection`, caused by the
+firmware's DHCP handling. See "Known device issue" below.
+
+## TESTRUN RESULTS RELEVANT TO THIS APP (same on both builds)
 
 | Test | Required? | Result |
 | --- | --- | --- |
@@ -60,8 +69,13 @@ Packet capture of Testrun's device port: the first NTPv4 request (byte 0 = 0x23)
 * Lock screen disabled on the test device (BOOT_COMPLETED follows immediately; LOCKED_BOOT_COMPLETED covers locked devices)
 
 ## KNOWN DEVICE ISSUE (FIRMWARE, NOT THIS APP)
-`connection.switch.arp_inspection` fails on this Android 15 build. Testrun issues 30-second DHCP
-leases; the firmware's network stack gives the IPv4 address a 30 s lifetime but renews only at
-~30 s, so a renewal answered ~1 s late loses the address, Ethernet restarts and the tablet takes a
-different IP. ARP sent from the other address is graded as false. The Android 13 firmware kept its
-address through the same delays and passed. A firmware fix has been requested from the vendor.
+`connection.switch.arp_inspection` failed on the earlier Android 15 build (AP3A.260207.015.A2).
+Testrun issues 30-second DHCP leases; the firmware's network stack gives the IPv4 address a 30 s
+lifetime but renews only at ~30 s, so a renewal answered ~1 s late loses the address, Ethernet
+restarts and the tablet takes a different IP. ARP sent from the other address is graded as false.
+The Android 13 firmware kept its address through the same delays and passed. A firmware fix has been
+requested from the vendor.
+
+Firmware V3.0 passed this test in all three runs, but its network stack still gives the address a
+30 s lifetime. The pass relied on Testrun's DHCP server answering every renewal promptly, so the
+request to the vendor stands.

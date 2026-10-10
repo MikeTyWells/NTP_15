@@ -8,11 +8,21 @@
 - Testrun's DHCP offer carries no NTP option (42); `10.10.10.5` is hard-coded in Testrun's NTP
   module as "the DHCP provided NTP server".
 
+## What the Android 15 runs showed (Testrun 2.4.0, firmware V3.0 / AP3A.260803.015.A2)
+- Three full runs on 2026-10-09, all Compliant overall with every Required test Compliant. The last
+  two had no Non-Compliant results at all, including the Roadmap `ntp_dhcp` test.
+- The app's NTPv4 went only to `10.10.10.5`. The OS also sent NTPv3 to `time.android.com`; see
+  below for how that affects `ntp_dhcp`.
+- TLS 1.0/1.2 client tests: Feature Not Detected (passing). TLS 1.3 client connections: valid.
+
 ## How Testrun grades these tests (Device Qualification pack)
 - `ntp.network.ntp_support` (Required): Compliant if any NTPv4 packet from the device appears in
   startup.pcap, monitor.pcap or the NTP server's ntp.pcap. NTPv3 only = Non-Compliant; no NTP = Non-Compliant.
-- `ntp.network.ntp_dhcp` (Roadmap, not in the verdict): Compliant if NTP goes only to 10.10.10.5;
-  Non-Compliant if it goes to 10.10.10.5 and another server.
+- `ntp.network.ntp_dhcp` (Roadmap, not in the verdict): Compliant if NTP goes only to 10.10.10.5,
+  or also to other servers Testrun rates trusted. A server is trusted if ntppool.org gives it a score
+  of 10 or more, or if the Testrun host gets an NTP reply from it within 2 s. Both checks run from the
+  Testrun host, so if that host is offline at that moment every other server is untrusted and the test
+  is Non-Compliant.
 - `security.tls.*_client` (Required if Applicable): only Non-Compliant counts against the verdict.
   Non-Compliant is triggered by TLS 1.0/1.1 client hellos, hellos without ECDH/ECDSA ciphers, or
   non-TLS TCP/UDP traffic to public IPs (DNS, NTP, ICMP excluded) - including TCP SYNs that never
@@ -44,8 +54,12 @@
 - no hidden/non-SDK APIs
 
 ## Things outside this APK to check on the tablet
-- The OS's own NTP client sends NTPv3. If DNS works in the lab it may query an external pool; that
-  keeps `ntp_support` Compliant (v3 + v4) but marks the Roadmap `ntp_dhcp` test Non-Compliant.
+- The OS's own NTP client sends NTPv3 to `time.android.com` (216.239.35.x). That keeps `ntp_support`
+  Compliant (v3 + v4). For the Roadmap `ntp_dhcp` test it is fine while the Testrun host has internet;
+  if the host is offline when the NTP module runs, the server is rated untrusted and `ntp_dhcp` is
+  Non-Compliant. To remove that dependency during testing, run
+  `adb shell settings put global ntp_server 10.10.10.5`, and undo it afterwards with
+  `adb shell settings delete global ntp_server`, or the tablet's clock will not sync off the test network.
 - If the lab has internet, Android's plain-HTTP connectivity check (port 80) is non-TLS traffic to a
   public IP and can fail the TLS client tests regardless of this app. Check monitor.pcap.
 - Private DNS set to a specific hostname causes DNS-over-TLS on port 853 to a public resolver.
@@ -53,9 +67,11 @@
   MicroTouch IDC tablet the internal `usb0` link then becomes Android's default network; the app sends
   NTP by route (`NetworkSelector`), so its traffic still leaves on eth0.
 - The Testrun device profile must use the tablet's eth0 MAC.
-- Android 15 IDC firmware (AP3A.260207.015.A2) fails `connection.switch.arp_inspection`: with Testrun's
-  30-second leases its network stack lets the IPv4 address expire at the moment it renews, so a late DHCP
-  reply makes the tablet change address. This is a firmware issue (the Android 13 build passed); see
+- `connection.switch.arp_inspection` on Android 15 IDC firmware: the earlier build (AP3A.260207.015.A2)
+  failed it. With Testrun's 30-second leases its network stack lets the IPv4 address expire at the
+  moment it renews, so a late DHCP reply makes the tablet change address. Firmware V3.0
+  (AP3A.260803.015.A2) passed in three full runs, but it still sets the address lifetime to the 30 s
+  lease, so the pass depends on Testrun's DHCP server answering promptly. See
   `google_testrun_evidence/final_validation_report.md`.
 
 ## Important limitation
